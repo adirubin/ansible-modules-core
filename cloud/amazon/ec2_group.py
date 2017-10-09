@@ -106,6 +106,7 @@ EXAMPLES = '''
         # description to use if example-other needs to be created
         group_desc: other example EC2 group
 '''
+import datetime
 
 try:
     import boto.ec2
@@ -184,6 +185,7 @@ def main():
     argument_spec.update(dict(
             name=dict(required=True),
             description=dict(required=True),
+            filters=dict(default=None),
             vpc_id=dict(),
             rules=dict(),
             rules_egress=dict(),
@@ -201,6 +203,7 @@ def main():
     name = module.params['name']
     description = module.params['description']
     vpc_id = module.params['vpc_id']
+    filters = module.params['filters']
     rules = module.params['rules']
     rules_egress = module.params['rules_egress']
     state = module.params.get('state')
@@ -214,7 +217,12 @@ def main():
     # find the group if present
     group = None
     groups = {}
-    for curGroup in ec2.get_all_security_groups():
+    start = time.time()
+    res = ec2.get_all_security_groups(filters=filters)
+    end = time.time()
+    get_all_security_groups_sw = (end - start)
+
+    for curGroup in res:
         groups[curGroup.id] = curGroup
         groups[curGroup.name] = curGroup
 
@@ -241,7 +249,10 @@ def main():
             '''existing group found'''
             # check the group parameters are correct
             group_in_use = False
-            rs = ec2.get_all_instances()
+            start = time.time()
+            rs = ec2.get_all_instances(filters=filters)
+            end = time.time()
+            get_all_instances_sw = (end - start)
             for r in rs:
                 for i in r.instances:
                     group_in_use |= reduce(lambda x, y: x | (y.name == 'public-ssh'), i.groups, False)
@@ -383,7 +394,7 @@ def main():
                 changed = True
 
     if group:
-        module.exit_json(changed=changed, group_id=group.id)
+        module.exit_json(debug="get_all_security_groups_took: "+str(get_all_security_groups_sw) + " | get_all_instances_took: "+str(get_all_instances_sw), changed=changed, group_id=group.id)
     else:
         module.exit_json(changed=changed, group_id=None)
 
