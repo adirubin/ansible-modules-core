@@ -229,6 +229,8 @@ def main():
         if curGroup.name == name and (vpc_id is None or curGroup.vpc_id == vpc_id):
             group = curGroup
 
+    get_all_instances_sw = None
+
     # Ensure requested group is absent
     if state == 'absent':
         if group:
@@ -394,7 +396,10 @@ def main():
                 changed = True
 
     if group:
-        module.exit_json(debug="get_all_security_groups_took: "+str(get_all_security_groups_sw) + " | get_all_instances_took: "+str(get_all_instances_sw), changed=changed, group_id=group.id)
+        dbg_msg = "get_all_security_groups_took: "+str(get_all_security_groups_sw)
+        if get_all_instances_sw is not None:
+            dbg_msg = dbg_msg + " | get_all_instances_took: "+str(get_all_instances_sw)
+        module.exit_json(debug=dbg_msg, changed=changed, group_id=group.id)
     else:
         module.exit_json(changed=changed, group_id=None)
 
